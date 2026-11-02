@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 本地快照库（用 `defillama.py db backup` 导出单文件，或提交 backfill JSON）
+token_research.db
+token_research.db-wal
+token_research.db-shm
+**/.cache/protocols.json
+
+# design-taste-frontend 检查产物（截图与报告，每次运行重新生成）
+.taste-skill/
+
+# 密钥与本地配置
+.env
+*.local.yaml
+config.local.*
+
+# OS
+.DS_Store
+Thumbs.db

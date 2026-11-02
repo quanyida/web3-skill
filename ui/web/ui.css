@@ -1,0 +1,694 @@
+/* token-research/ui.css — data-terminal sheet on top of app.css.
+   Move kept intact: every selection is a 1px accent line as wide as its label.
+   Colour budget under 3%: the accent never fills anything, only underlines.
+   taste-skill-ignore mono: the dealt sheet's "Its face" lists "every figure in a
+   monospace as the style's decision" as one of the ways this screen takes its face
+   from the brief (IBM Plex Mono or JetBrains Mono for each price, count and time).
+   Mono is used on figures, tick values and ids only, never on labels or prose. */
+
+/* Specificity note: app.css declares its dark palette on `:root[data-theme="dark"]`
+   (0,1,1), which outranks a plain `:root` (0,1,0) regardless of load order. The
+   selector here repeats the attribute so this sheet's direction actually wins —
+   without it the page rendered app.css's #000000 ground instead of #171719. */
+:root,
+:root[data-theme="dark"] {
+  --ground: #171719;
+  --surface: #131217;
+  --raised: #212023;
+  --border: #222224;
+  --rule: #1b1a1f;
+  --control: #3a3a3e;
+  --text: #ffffff;
+  --muted: #8a8c92;
+  --accent: #4a8ad6;
+  --positive: #44a282;
+  --negative: #e5566f;
+  --warning: #d9a441;
+  --chart-1: #f2f2f3;
+  --chart-2: #e5566f;
+  --chart-3: #4a8ad6;
+  --pill-positive-bg: #1b2828; --pill-positive-ink: #5fc39c;
+  --pill-negative-bg: #2c1a20; --pill-negative-ink: #e5566f;
+  --pill-warning-bg: #2a2416; --pill-warning-ink: #d9a441;
+  --pill-neutral-bg: #212023; --pill-neutral-ink: #bdbdc0;
+  --shadow: 0 12px 28px rgba(0,0,0,.2);
+  --radius-card: 6px;
+  --radius-control: 999px;
+  --row-height: 42px;
+  --sidebar-width: 50px;
+  --gap: 24px;
+  --pad: 32px;
+  --control-height: 34px;
+  --fs-title: 26px;
+  --fs-section: 20px;
+  --fs-kpi: 20px;
+  /* Body 14 / small 13: most text on this screen is data and labels, which the
+     study reads at 13-14px. Only meta (source stamps, axis ticks) goes to 12. */
+  --fs-body: 14px;
+  --fs-small: 13px;
+  --fs-meta: 12px;
+  --font: "Public Sans", Inter, system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; }
+
+/* The dealt face only: any `code` the browser would set in its own generic
+   monospace takes JetBrains Mono instead, so the page renders one second face,
+   not two. */
+code, pre, kbd, samp { font-family: var(--mono); }
+
+html, body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: var(--fs-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.num, td.num, th.num { font-variant-numeric: tabular-nums; }
+
+/* `hidden` must win over a component's own `display` (flex/grid), or the
+   detail panel and the empty-row notice show while the script has them off. */
+[hidden] { display: none !important; }
+
+/* ---------- Icon rail ---------- */
+.rail {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--sidebar-width);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 0;
+  gap: 18px;
+  background: var(--ground);
+  border-right: 1px solid var(--border);
+  z-index: 20;
+}
+.rail-mark {
+  color: var(--text);
+  display: grid;
+  place-items: center;
+  width: 34px; height: 34px;
+  border-radius: var(--radius-card);
+  background: var(--raised);
+  text-decoration: none;
+}
+.rail-group { display: flex; flex-direction: column; gap: 6px; width: 100%; align-items: center; }
+.rail-group::before {
+  content: "";
+  width: 22px; height: 1px;
+  background: var(--border);
+  margin-bottom: 12px;
+}
+.rail-foot { margin-top: auto; }
+.rail-item {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 34px; height: 34px;
+  border-radius: var(--radius-card);
+  color: var(--muted);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  text-decoration: none;
+  transition: color .12s ease;
+}
+.rail-item svg { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.rail-mark svg { fill: currentColor; stroke: none; }
+.rail-item:hover { color: var(--text); }
+.rail-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* The move: the active item is a 1px accent line on the rail's nearest edge. */
+.rail-item.is-active { color: var(--text); }
+.rail-item.is-active::after {
+  content: "";
+  position: absolute;
+  left: -14px;
+  top: 8px; bottom: 8px;
+  width: 1px;
+  background: var(--accent);
+}
+/* Tooltip: plain box, no arrow, only on the icon rail */
+.rail-item[data-tip]::before {
+  content: attr(data-tip);
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 4px 8px;
+  background: var(--raised);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: var(--fs-small);
+  color: var(--text);
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .12s ease;
+}
+.rail-item:hover::before, .rail-item:focus-visible::before { opacity: 1; }
+
+/* ---------- Canvas ---------- */
+.canvas {
+  margin-left: var(--sidebar-width);
+  padding: var(--pad);
+  max-width: 1400px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+/* ---------- Title row ---------- */
+.title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gap);
+  flex-wrap: wrap;
+}
+.title-block { min-width: 0; }
+h1 {
+  margin: 0;
+  font-size: var(--fs-title);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+.title-sub {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: var(--fs-body);
+}
+.title-actions { display: flex; gap: 8px; align-items: center; }
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--control-height);
+  padding: 0 12px;
+  background: var(--surface);
+  border: 1px solid var(--control);
+  border-radius: var(--radius-card);
+  color: var(--muted);
+}
+.search:focus-within { border-color: var(--accent); }
+.search svg { stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; flex: none; }
+.search input {
+  width: 190px;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  color: var(--text);
+  font: inherit;
+}
+.search input::placeholder { color: var(--muted); }
+
+/* ---------- The finding ---------- */
+.finding {
+  margin: 0;
+  padding: 14px 16px;
+  background: var(--surface);
+  border-left: 2px solid var(--warning);
+  border-radius: 0 var(--radius-card) var(--radius-card) 0;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.finding strong { font-weight: 600; }
+.finding .f-num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+/* ---------- KPI strip: one container, hairlines, no tiles ---------- */
+.strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+.strip-cell {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-left: 1px solid var(--rule);
+}
+.strip-cell:first-child { border-left: 0; }
+.strip-label { color: var(--muted); font-size: var(--fs-small); }
+.strip-value {
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+.strip-note { color: var(--muted); font-size: var(--fs-meta); }
+
+/* ---------- Panels ---------- */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  padding: 18px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  /* .canvas is a column flex, so `align-self: start` acts on the cross axis: it
+     shrank every card to its content (so the first screen's right half stayed
+     empty and the panels ended at 772/731/786px). A column already sizes a child
+     to its content, so stretching it here costs no vertical slack. */
+  align-self: stretch;
+}
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+h2 {
+  margin: 0;
+  font-size: var(--fs-section);
+  font-weight: 400;
+  color: var(--muted);
+  letter-spacing: 0;
+}
+.panel-count {
+  font-family: var(--mono);
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+.panel-note { margin: 0; color: var(--muted); font-size: var(--fs-small); }
+.panel-foot {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: var(--fs-small);
+  line-height: 1.6;
+}
+
+/* ---------- TSR chart ---------- */
+/* No min-height: the chart is as tall as its rows. A min-height would leave a
+   blank band under the last bar when there are fewer rows than it assumes. */
+.tsr-chart { flex: 1 1 auto; }
+.tsr-chart svg { display: block; width: 100%; height: auto; }
+/* The track is part of the mark, not empty ground: one tone step above the
+   panel so the unbarred length reads as a track, not as blank space. */
+.tsr-chart .tsr-track { fill: var(--raised); }
+/* The screen's one data hue lives on the bars. */
+.tsr-chart .tsr-fill { fill: var(--accent); }
+.tsr-chart .tsr-fill.is-lead { fill: var(--accent); }
+.tsr-chart .tsr-tick { stroke: var(--muted); stroke-width: 1; }
+.tsr-chart text { fill: var(--muted); font-family: var(--font); font-size: 12px; }
+.tsr-chart text.tsr-name { fill: var(--text); font-size: 13px; }
+.tsr-chart text.tsr-val { fill: var(--text); font-family: var(--mono); font-size: 12px; }
+
+/* ---------- Table ---------- */
+.table-wrap { overflow-x: auto; }
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-body);
+}
+.tbl th {
+  font-size: var(--fs-small);
+  font-weight: 400;
+  color: var(--muted);
+  text-align: left;
+  padding: 0 12px 8px;
+  white-space: nowrap;
+}
+.tbl th.num, .tbl td.num { text-align: right; }
+.tbl td {
+  padding: 0 12px;
+  height: var(--row-height);
+  border-top: 1px solid var(--rule);
+  white-space: nowrap;
+}
+.tbl tbody tr { cursor: pointer; }
+.tbl tbody tr:hover td { background: rgba(255, 255, 255, .028); }
+.tbl tbody tr:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+/* Selection is the --active fill (app-screens §7.8: a list that drives a detail
+   pane marks the selected row with the nav pill's fill, so it cannot be mistaken
+   for hover or focus). No accent bar on the row. */
+.tbl tbody tr.is-selected td { background: var(--active); }
+.col-name { width: 30%; }
+.name-cell { display: flex; align-items: baseline; gap: 8px; }
+.name-txt { color: var(--text); }
+.sym {
+  font-family: var(--mono);
+  font-size: var(--fs-meta);
+  color: var(--muted);
+  letter-spacing: .02em;
+}
+.dash { color: var(--muted); }
+.score { font-family: var(--mono); }
+.warn-cell { color: var(--negative); }
+
+/* Verdict: a 6px dot with an ink label, never a filled pill above a heading */
+.verdict { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-small); }
+.verdict::before {
+  content: "";
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex: none;
+}
+.verdict.is-narrative::before { background: var(--warning); }
+.verdict.is-mixed::before { background: var(--accent); }
+.verdict.is-real::before { background: var(--positive); }
+.verdict.is-none { color: var(--muted); }
+
+.empty {
+  margin: 16px 0 0;
+  padding: 18px;
+  border: 1px dashed var(--control);
+  border-radius: var(--radius-card);
+  color: var(--muted);
+  font-size: var(--fs-small);
+  text-align: center;
+}
+
+/* ---------- Detail ---------- */
+.detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(240px, 1fr);
+  gap: var(--gap);
+  align-items: start;
+}
+.detail-liner {
+  margin: 0 0 16px;
+  font-size: 15px;
+  line-height: 1.6;
+  max-width: 62ch;
+}
+.detail-capture {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 12px;
+  padding: 12px 14px;
+  background: var(--raised);
+  border-radius: var(--radius-card);
+  margin-bottom: 10px;
+}
+.detail-k { color: var(--muted); font-size: var(--fs-small); flex: none; }
+.detail-v { font-weight: 500; }
+.detail-note { color: var(--muted); font-size: var(--fs-small); flex-basis: 100%; }
+.detail-layers { display: flex; flex-direction: column; gap: 8px; }
+.layer-row { display: flex; gap: 12px; align-items: baseline; }
+.detail-missing { color: var(--muted); font-size: var(--fs-small); }
+
+.kv {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0;
+  border-top: 1px solid var(--rule);
+}
+.kv dt {
+  color: var(--muted);
+  font-size: var(--fs-small);
+  padding: 8px 12px 8px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.kv dd {
+  margin: 0;
+  padding: 8px 0;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: var(--fs-small);
+  border-bottom: 1px solid var(--rule);
+}
+
+/* ---------- Paths (methodology) ---------- */
+.paths {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+.path {
+  background: var(--surface);
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 10px;
+}
+.path-name { color: var(--text); font-size: var(--fs-body); font-weight: 500; }
+.path-str {
+  font-family: var(--mono);
+  font-size: var(--fs-meta);
+  color: var(--muted);
+  text-align: right;
+}
+.path-txt { grid-column: 1 / -1; color: var(--muted); font-size: var(--fs-small); line-height: 1.5; }
+.path.is-strong .path-str { color: var(--positive); }
+.path.is-mid .path-str { color: var(--warning); }
+.path.is-weak .path-str { color: var(--muted); }
+
+/* ---------- Footer ---------- */
+.foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 8px 2px 24px;
+  color: var(--muted);
+  font-size: var(--fs-small);
+}
+.foot code { font-family: var(--mono); color: var(--muted); }
+
+/* ---------- Phone ---------- */
+@media (max-width: 1100px) {
+  .detail-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+  :root { --pad: 18px; --gap: 18px; }
+  .rail {
+    inset: auto 0 0 0;
+    width: auto;
+    height: 56px;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+    padding: 0 8px;
+    gap: 0;
+    border-right: 0;
+    border-top: 1px solid var(--border);
+  }
+  .rail-group { flex-direction: row; gap: 0; width: auto; }
+  .rail-group::before { display: none; }
+  .rail-mark { display: none; }
+  .rail-foot { margin-top: 0; }
+  .rail-item.is-active::after { left: 8px; right: 8px; top: auto; bottom: -6px; width: auto; height: 1px; }
+  .rail-item[data-tip]::before { display: none; }
+  .canvas { margin-left: 0; padding-bottom: 74px; }
+  h1 { font-size: 22px; }
+  .strip { grid-template-columns: repeat(2, 1fr); }
+  .strip-cell:nth-child(3) { border-left: 0; border-top: 1px solid var(--rule); }
+  .strip-cell:nth-child(4) { border-top: 1px solid var(--rule); }
+  .strip-value { font-size: 22px; }
+  .search input { width: 100%; }
+  .search { width: 100%; }
+  .title-actions { width: 100%; }
+  /* Table becomes two-line rows: identity + key figure on line 1, the rest on line 2 */
+  .tbl thead { display: none; }
+  .tbl, .tbl tbody, .tbl tr, .tbl td { display: block; width: 100%; }
+  .tbl tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2px 10px;
+    padding: 12px 0;
+    border-top: 1px solid var(--rule);
+  }
+  .tbl td { height: auto; padding: 0; border: 0; white-space: normal; }
+  .tbl td.col-name { grid-column: 1 / -1; }
+  /* Keep numbers right-aligned on the phone too; the label sits left in the same grid cell. */
+  .tbl td.num {
+    text-align: right;
+    color: var(--muted);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+  }
+  .tbl td.num::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 11px;
+    text-align: left;
+  }
+  .tbl td.col-verdict { grid-column: 1 / -1; padding-top: 4px; }
+  .tbl tbody tr.is-selected { background: var(--active); }
+}
+
+/* ---------- Detail: sub-blocks (holders, history, reports) ---------- */
+.detail-sub { margin-top: 22px; }
+.detail-sub h3 {
+  margin: 0 0 10px;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--muted);
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.detail-sub .kv { max-width: 380px; }
+.detail-chart { min-height: 0; }
+.detail-chart svg { display: block; width: 100%; height: auto; }
+
+.link-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.link-btn {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 6px 0;
+  text-align: left;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-small);
+  cursor: pointer;
+  border-bottom: 1px solid var(--rule);
+  width: 100%;
+}
+.link-btn:hover { color: var(--accent); }
+.link-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- Reports: list drives the reader ---------- */
+.report-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.85fr) minmax(0, 2fr);
+  gap: var(--gap);
+  align-items: start;
+}
+.report-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.report-item {
+  appearance: none;
+  width: 100%;
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-left: 2px solid transparent;
+  border-radius: 0 var(--radius-card) var(--radius-card) 0;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.report-item:hover { background: var(--raised); }
+.report-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.report-item.is-selected { background: var(--raised); border-left-color: var(--accent); }
+.report-item-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.report-item-name { font-weight: 500; }
+.report-item-date { color: var(--muted); font-size: var(--fs-meta); }
+.report-item-liner {
+  color: var(--muted);
+  font-size: var(--fs-small);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* No min-height: an empty reader is a placeholder, not a card's worth of blank
+   band. It grows to the report it holds. */
+.report-reader {
+  max-height: 78vh;
+  overflow: auto;
+  padding-right: 4px;
+}
+.md-head { border-bottom: 1px solid var(--rule); padding-bottom: 12px; margin-bottom: 4px; }
+.md-head h3 { margin: 0 0 4px; font-size: 17px; font-weight: 600; }
+.md-meta { margin: 0; color: var(--muted); font-size: var(--fs-meta); }
+.md-meta code { font-family: var(--mono); font-size: 11px; }
+
+/* Markdown body: the prose rules the report is written in, no library. */
+.md {
+  max-width: 76ch;
+  font-size: var(--fs-body);
+  line-height: 1.72;
+  color: var(--text);
+}
+.md > :first-child { margin-top: 0; }
+.md h1, .md h2, .md h3, .md h4 {
+  margin: 26px 0 10px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+.md h1 { font-size: 22px; }
+.md h2 { font-size: 17px; }
+.md h3 { font-size: 15px; }
+.md h4 { font-size: 14px; color: var(--muted); }
+.md p { margin: 0 0 12px; }
+.md ul, .md ol { margin: 0 0 12px; padding-left: 20px; }
+.md li { margin: 3px 0; }
+.md li > p { margin: 0 0 6px; }
+.md blockquote {
+  margin: 14px 0;
+  padding: 8px 14px;
+  border-left: 2px solid var(--control);
+  color: var(--muted);
+}
+.md blockquote p:last-child { margin-bottom: 0; }
+.md hr { margin: 24px 0; border: 0; border-top: 1px solid var(--rule); }
+.md code {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--raised);
+}
+.md pre {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  background: var(--raised);
+  border-radius: var(--radius-card);
+  overflow: auto;
+}
+.md pre code { padding: 0; background: transparent; font-size: 12px; line-height: 1.6; }
+.md table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 16px;
+  font-size: var(--fs-small);
+}
+.md th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--muted);
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--control);
+  white-space: nowrap;
+}
+.md td { padding: 6px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.md strong { font-weight: 600; }
+.md a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+
+@media (max-width: 1100px) {
+  .report-grid { grid-template-columns: 1fr; }
+  .report-reader { max-height: none; }
+}

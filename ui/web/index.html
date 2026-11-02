@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>代币研究快照库</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="ui.css">
+</head>
+<body>
+
+<!-- Icon rail: 50px, product mark at top, four destinations, no labels (few destinations, width needed) -->
+<nav class="rail" aria-label="主导航">
+  <a class="rail-mark" href="#overview" aria-label="代币研究快照库，回到概览">
+    <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><rect x="2" y="9" width="3" height="9" fill="currentColor"/><rect x="8.5" y="4" width="3" height="14" fill="currentColor"/><rect x="15" y="12" width="3" height="6" fill="currentColor"/></svg>
+  </a>
+  <div class="rail-group">
+    <a class="rail-item is-active" href="#overview" aria-label="概览" data-tip="概览">
+      <svg viewBox="0 0 16 16" width="17" height="17" aria-hidden="true"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+    </a>
+    <a class="rail-item" href="#tokens" aria-label="代币列表" data-tip="代币列表">
+      <svg viewBox="0 0 16 16" width="17" height="17" aria-hidden="true"><path d="M2 4h12M2 8h12M2 12h8"/></svg>
+    </a>
+    <a class="rail-item" href="#reports" aria-label="研究报告" data-tip="研究报告">
+      <svg viewBox="0 0 16 16" width="17" height="17" aria-hidden="true"><path d="M4 2h6l3 3v9H4z"/><path d="M10 2v3h3"/></svg>
+    </a>
+  </div>
+  <div class="rail-foot">
+    <a class="rail-item" href="#method" aria-label="方法论" data-tip="方法论">
+      <svg viewBox="0 0 16 16" width="17" height="17" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 7v4M8 5v.5"/></svg>
+    </a>
+  </div>
+</nav>
+
+<main class="canvas" id="overview">
+
+  <!-- Title row: one h1, one finding line, search on the right -->
+  <header class="title-row">
+    <div class="title-block">
+      <h1>代币研究快照库</h1>
+      <p class="title-sub"><span class="num" id="subCount">—</span> 个研究对象 · TVL 合计 <span class="num" id="tvlTotal">—</span></p>
+    </div>
+    <div class="title-actions">
+      <label class="search" aria-label="按名称或代码筛选代币">
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5L14 14"/></svg>
+        <input type="search" id="q" placeholder="筛选名称或代码" autocomplete="off">
+      </label>
+    </div>
+  </header>
+
+  <!-- The finding, stated once, read before the table -->
+  <p class="finding" id="finding"></p>
+
+  <!-- KPI strip: one container split by hairlines, no tiles, no icons -->
+  <section class="strip" aria-label="库概览">
+    <div class="strip-cell">
+      <span class="strip-label">研究对象</span>
+      <span class="strip-value num" id="kTotal"></span>
+      <span class="strip-note">链 + 协议 + 纯代币</span>
+    </div>
+    <div class="strip-cell">
+      <span class="strip-label">已判定</span>
+      <span class="strip-value num" id="kJudged"></span>
+      <span class="strip-note">完成祛魅检验</span>
+    </div>
+    <div class="strip-cell">
+      <span class="strip-label">叙事定价</span>
+      <span class="strip-value num" id="kNarr"></span>
+      <span class="strip-note">判定为纯叙事</span>
+    </div>
+    <div class="strip-cell">
+      <span class="strip-label">有持有结构</span>
+      <span class="strip-value num" id="kHold"></span>
+      <span class="strip-note">走过 Step 2.5</span>
+    </div>
+  </section>
+
+  <!-- TSR ranking: the signature element. TVL ÷ 市值, the screen's lead figure -->
+  <section class="panel panel-lead" aria-labelledby="tsrTitle">
+    <div class="panel-head">
+      <h2 id="tsrTitle">TVL / 市值 比</h2>
+      <p class="panel-note">每 1 美元市值对应多少美元锁在链上 · 对数刻度 · 越低越可能是叙事估值</p>
+    </div>
+    <div id="tsrChart" class="tsr-chart"></div>
+    <p class="panel-foot">比值高不等于业务强：TVL 记的是锁在链上的存款，可能是用户的钱而不是协议的钱。读这个图要和下面每一行的判定一起看。</p>
+  </section>
+
+  <!-- Token table -->
+  <section class="panel" id="tokens" aria-labelledby="tblTitle">
+    <div class="panel-head">
+      <h2 id="tblTitle">研究对象 <span class="panel-count" id="rowCount"></span></h2>
+      <p class="panel-note">按 TSR 降序 · 点击行查看结论</p>
+    </div>
+    <div class="table-wrap">
+      <table class="tbl" id="tbl">
+        <thead>
+          <tr>
+            <th scope="col" class="col-name">名称</th>
+            <th scope="col" class="num">TVL</th>
+            <th scope="col" class="num">市值</th>
+            <th scope="col" class="num">TSR</th>
+            <th scope="col" class="num">持币地址</th>
+            <th scope="col" class="num">前10占比</th>
+            <th scope="col" class="col-verdict">判定</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <p class="empty" id="emptyRows" hidden>没有匹配的研究对象。</p>
+    </div>
+  </section>
+
+  <!-- Detail: reading the selected object's conclusion -->
+  <section class="panel panel-detail" id="detail" aria-labelledby="detailTitle" hidden>
+    <div class="panel-head">
+      <h2 id="detailTitle">结论</h2>
+      <p class="panel-note" id="detailMeta"></p>
+    </div>
+    <div class="detail-grid">
+      <div class="detail-main">
+        <p class="detail-liner" id="detailLiner"></p>
+        <div class="detail-capture">
+          <span class="detail-k">代币价值捕获</span>
+          <span class="detail-v" id="detailCapture"></span>
+          <span class="detail-note" id="detailCaptureNote"></span>
+        </div>
+        <div class="detail-layers">
+          <div class="layer-row">
+            <span class="detail-k">协议层</span>
+            <span class="detail-v" id="detailProtocol"></span>
+          </div>
+          <div class="layer-row">
+            <span class="detail-k">数据源缺失</span>
+            <span class="detail-v detail-missing" id="detailMissing"></span>
+          </div>
+        </div>
+
+        <div class="detail-sub">
+          <h3>持有结构</h3>
+          <dl class="kv" id="detailHolders"></dl>
+        </div>
+
+        <div class="detail-sub">
+          <h3>TVL 走势 <span class="panel-count" id="detailHistoryNote"></span></h3>
+          <div id="detailHistory" class="detail-chart"></div>
+        </div>
+
+        <div class="detail-sub">
+          <h3>该对象的报告</h3>
+          <ul class="link-list" id="detailReports"></ul>
+        </div>
+      </div>
+      <div class="detail-side">
+        <dl class="kv" id="detailKv"></dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- Reports: the list drives the reader, the same way the table drives the detail pane -->
+  <section class="panel" id="reports" aria-labelledby="reportsTitle">
+    <div class="panel-head">
+      <h2 id="reportsTitle">研究报告 <span class="panel-count" id="reportCount"></span></h2>
+      <p class="panel-note">库里登记的报告全文 · 取自 <code>token_research.db</code> 的 report_path</p>
+    </div>
+    <div class="report-grid">
+      <ul class="report-list" id="reportList"></ul>
+      <div class="report-reader" id="reportBody">
+        <p class="empty">选一份报告，正文在这里打开。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Methodology: what the judgement means. Carries the idea into the last block. -->
+  <section class="panel" id="method" aria-labelledby="methodTitle">
+    <div class="panel-head">
+      <h2 id="methodTitle">六条价值捕获路径</h2>
+      <p class="panel-note">判定「钱有没有进持币者口袋」的依据</p>
+    </div>
+    <ul class="paths">
+      <li class="path is-strong"><span class="path-name">费用分享 / 分红</span><span class="path-str">较强</span><span class="path-txt">把协议真实收入按比例分给持币者；收益率恒定说明靠增发</span></li>
+      <li class="path is-strong"><span class="path-name">强制使用 Utility</span><span class="path-str">较强</span><span class="path-txt">必须持有或消耗代币才能用核心功能；做成「可选折扣券」就是假的</span></li>
+      <li class="path is-mid"><span class="path-name">回购 / 销毁</span><span class="path-str">中等偏弱</span><span class="path-txt">用收入买回并销毁；收入不稳定时难持续，容易变成画饼</span></li>
+      <li class="path is-mid"><span class="path-name">质押 / 锁仓</span><span class="path-str">中等</span><span class="path-txt">锁仓换收益或权限；收益来自增发本质是稀释</span></li>
+      <li class="path is-weak"><span class="path-name">治理权</span><span class="path-str">弱到中等</span><span class="path-txt">对参数与金库有实质投票权；多数治理流于形式</span></li>
+      <li class="path is-weak"><span class="path-name">纯叙事 / 投机</span><span class="path-str">短强长弱</span><span class="path-txt">靠预期与流动性炒作；无基本面支撑时容易归零</span></li>
+    </ul>
+    <p class="panel-foot">硬规则：协议成功与代币成功分两行写，不许合并。只有官方宣称、无链上证据的路径记「画饼，待验证」，不计强度。</p>
+  </section>
+
+  <footer class="foot">
+    <span>数据来自本地快照库 <code>token_research.db</code> · 快照只追加，不覆盖历史</span>
+    <span class="foot-meta">最后抓取 <span id="footStamp">—</span></span>
+  </footer>
+</main>
+
+<script src="charts.js"></script>
+<script src="api.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
