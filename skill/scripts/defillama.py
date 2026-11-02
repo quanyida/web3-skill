@@ -887,19 +887,27 @@ def _object_or_die(conn, name, create=False, kind=None, dry_run=False):
 
 
 def cmd_init(args):
+    # open_db 建表后就会补指针；先记下进来之前的状态，才能如实报告是不是本次写的
+    had_pointer = store.read_pointer() is not None
     conn, path, source = open_db(args)
     seeded = store.seed(conn, force=args.force) if args.seed else None
     uver = store.user_version(conn)
     tables = [r["name"] for r in conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
         " ORDER BY name")]
-    # 落一个用户级指针，避免技能的其他副本各建一个库。
-    # 显式 --db / 环境变量不改指针（那是用户在指定「这一次」，不是「以后都用它」）。
-    pointer_written, pointer_reason = store.maybe_claim_pointer(path, source)
+    # 显式 --db / 环境变量不改指针（那是用户在指定「这一次」，不是「以后都用它」）
+    if source == "cli" or source.startswith("env:"):
+        reason = "explicit_path"
+    elif had_pointer:
+        reason = "has_pointer"
+    elif store.read_pointer():
+        reason = "written"
+    else:
+        reason = "write_failed"
     _emit({"db": path, "db_source": source, "user_version": uver,
            "tables": tables, "seeded": seeded,
-           "pointer": store.pointer_file(), "pointer_written": pointer_written,
-           "pointer_reason": pointer_reason})
+           "pointer": store.pointer_file(), "pointer_written": reason == "written",
+           "pointer_reason": reason})
 
 
 def cmd_db_path(args):
