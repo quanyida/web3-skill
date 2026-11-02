@@ -837,11 +837,13 @@ def cmd_compare(a_chain, b_chain):
 def open_db(args, require_schema=True):
     path, source = store.resolve_db_path(getattr(args, "db", None))
     if store.is_skill_install_path(path):
-        _emit_err("DB 落在 agent 的 skills 目录里，不是用户数据区。建议设置 "
-                  "TOKEN_RESEARCH_DB 或用 --db 显式指定。当前: {}".format(path))
+        _emit_err("DB 落在 agent 的安装目录里，不是用户数据区（升级/卸载可能被删）。"
+                  "当前: {}。建议设 TOKEN_RESEARCH_DB 或用 --db 显式指定。".format(path))
     conn = store.connect(path)
     if require_schema:
         store.ensure_schema(conn)
+        # 首次建库后落指针，后续任意副本都解析到同一个库，不会各自分裂
+        store.maybe_claim_pointer(path, source)
     return conn, path, source
 
 
@@ -891,11 +893,13 @@ def cmd_init(args):
     tables = [r["name"] for r in conn.execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
         " ORDER BY name")]
-    # 落一个用户级指针，避免技能的其他副本各建一个库
-    pointer_written = store.write_pointer(path)
+    # 落一个用户级指针，避免技能的其他副本各建一个库。
+    # 显式 --db / 环境变量不改指针（那是用户在指定「这一次」，不是「以后都用它」）。
+    pointer_written, pointer_reason = store.maybe_claim_pointer(path, source)
     _emit({"db": path, "db_source": source, "user_version": uver,
            "tables": tables, "seeded": seeded,
-           "pointer": store.pointer_file(), "pointer_written": pointer_written})
+           "pointer": store.pointer_file(), "pointer_written": pointer_written,
+           "pointer_reason": pointer_reason})
 
 
 def cmd_db_path(args):
@@ -905,8 +909,12 @@ def cmd_db_path(args):
     ptr = store.read_pointer()
     info["pointer"] = store.pointer_file()
     info["pointer_target"] = ptr
-    if store.is_skill_install_path(path):
-        info["warning"] = "该路径在 agent skills 目录下；建议设 TOKEN_RESEARCH_DB 指向个人知识库"
+    if source == "default:user_home":
+        info["note"] = ("技能装在 agent 安装目录里，DB 已改落用户主目录：{}。"
+                        "想指定别处请设 TOKEN_RESEARCH_DB 或用 --db。".format(path))
+    elif store.is_skill_install_path(path):
+        info["warning"] = ("该路径在 agent 安装目录下，升级/卸载可能被删；"
+                           "建议设 TOKEN_RESEARCH_DB 指向个人知识库")
     _emit(info)
 
 

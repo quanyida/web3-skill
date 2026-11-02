@@ -295,11 +295,19 @@ def write_pointer(db_path: str) -> bool:
         return False
 
 
+def user_home_db() -> str:
+    """用户数据区兜底位置：技能装在 agent 安装目录时，DB 落这里而不是安装目录。"""
+    return os.path.join(os.path.expanduser("~"), "token_research.db")
+
+
 def resolve_db_path(cli_db=None):
     """DB 路径优先级: --db > TOKEN_RESEARCH_DB > ~/.token_research_db > 候选已存在者 > 首选候选。
 
     默认落在 skill 的**同级**目录（个人数据区），而不是 skill 内部 —— 技能目录要能干净复制分发。
-    返回 (path, source)。source: cli / env:TOKEN_RESEARCH_DB / pointer / existing / default。
+    若该位置属于 agent 安装目录（.claude/skills、.user_skills 等），改落用户主目录：
+    安装目录里的库会在升级/卸载时被删，而且每个副本各自向上推理还会静默分裂成多个库。
+    返回 (path, source)。
+    source: cli / env:TOKEN_RESEARCH_DB / pointer / existing / default / default:user_home。
     """
     if cli_db:
         return os.path.abspath(cli_db), "cli"
@@ -310,16 +318,53 @@ def resolve_db_path(cli_db=None):
     if ptr:
         return os.path.abspath(ptr), "pointer"
     cands = _default_db_candidates()
+    # 已存在的库一律沿用（哪怕在安装目录里）——那是用户已有的数据，不能让它凭空消失
     for c in cands:
         if os.path.isfile(c):
             return c, "existing"
+    if is_skill_install_path(cands[0]):
+        return user_home_db(), "default:user_home"
     return cands[0], "default"
 
 
+# agent 运行时的安装目录：DB 放进去会在升级/卸载时被删，且各副本互不可见。
+# 按路径分段判定而不是子串，避免 `.../my-skills-notes/` 之类误报；
+# 只认带点前缀的 agent 目录 —— 裸 `skills/` 太泛，用户自己的数据目录可能也叫这个。
+_INSTALL_SEGMENTS = frozenset((
+    ".claude", ".codex", ".cursor", ".continue", ".windsurf",
+    ".gemini", ".qwen", ".agents", ".user_skills",
+))
+_INSTALL_MARKERS = (
+    "agent_mode/workspace", "appdata/local/doubao",
+    "appdata/roaming/doubao", "appdata/local/lingma",
+)
+
+
 def is_skill_install_path(path: str) -> bool:
-    """运行版 skill 若没设环境变量，DB 会落到 agent 的 skills 目录 —— 那不是用户数据。"""
-    p = path.replace("\\", "/").lower()
-    return ".user_skills" in p or "/doubao/" in p or "appdata/local/doubao" in p
+    """路径是否落在 agent 的安装/运行时目录里 —— 那不是用户数据区。"""
+    p = os.path.abspath(path).replace("\\", "/").lower()
+    if any(m in p for m in _INSTALL_MARKERS):
+        return True
+    return any(seg in _INSTALL_SEGMENTS for seg in p.split("/"))
+
+
+def maybe_claim_pointer(path: str, source: str):
+    """建库后补一条用户级指针，让后续任意副本解析到同一个库。
+
+    只处理 `default*` / `existing` 这类脚本自己推出来的路径；
+    `--db` 与环境变量是用户显式指定，不写指针（否则会把全局指向临时库）。
+    返回 (written, reason)，reason: written / explicit_path / has_pointer /
+    db_missing / write_failed。
+    """
+    if source == "cli" or source.startswith("env:"):
+        return False, "explicit_path"
+    if read_pointer():
+        return False, "has_pointer"
+    if not os.path.isfile(path):
+        return False, "db_missing"
+    if not write_pointer(path):
+        return False, "write_failed"
+    return True, "written"
 
 
 def connect(path: str) -> sqlite3.Connection:

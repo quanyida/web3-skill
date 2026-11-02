@@ -444,13 +444,17 @@ def main(argv=None):
 
     if args.db:
         os.environ["TOKEN_RESEARCH_DB"] = os.path.abspath(args.db)
-    _DB_PATH["value"] = store.resolve_db_path()[0]
+    _DB_PATH["value"], _src = store.resolve_db_path()
 
     path = _DB_PATH["value"]
     print("[token-research-api] db = {}".format(path))
+    print("[token-research-api] source = {}".format(_src))
     print("[token-research-api] exists = {}".format(os.path.isfile(path)))
-    if store.is_skill_install_path(path):
-        print("[warn] DB 落在 agent skills 目录，建议设 TOKEN_RESEARCH_DB 指向个人知识库")
+    if _src == "default:user_home":
+        print("[info] 技能装在 agent 安装目录，DB 已改落用户主目录")
+    elif store.is_skill_install_path(path):
+        print("[warn] DB 落在 agent 安装目录（升级/卸载可能被删），"
+              "建议设 TOKEN_RESEARCH_DB 指向个人知识库")
     print("[token-research-api] http://{}:{}  (docs: /docs)".format(args.host, args.port))
 
     import uvicorn

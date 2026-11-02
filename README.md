@@ -146,9 +146,21 @@ Windows 下双击 `ui/启动.bat` 会自动挑一个能构造 FastAPI 的解释�
 2. 环境变量 `TOKEN_RESEARCH_DB`
 3. 用户级指针文件 `~/.token_research_db`
 4. 沿目录向上找到的已有 `token_research.db`
-5. 回退到 skill 同级的 `token_research.db`
+5. 回退到 skill 同级的 `token_research.db`；**若该位置在 agent 安装目录下**
+   （`.claude/skills`、`.user_skills`、`.agents`、Doubao/灵码 的 workspace 等），
+   改落用户主目录 `~/token_research.db`，来源标 `default:user_home`
 
-指针文件让多处副本共享同一个库，不会各建一个。
+装到 agent 目录时为什么要搬家：那里的库会在升级/卸载技能时被删，而且每个副本各自向上推理
+会得到不同路径，**静默分裂成多个库**。落主目录至少保证数据不丢。
+
+**指针自动落盘**：首次建库（`init` 或任意会建表的命令）后，如果指针文件还不存在，
+脚本会自动写入当前路径，之后任何副本都解析到同一个库。`--db` 与环境变量属于
+「这一次」的显式指定，**不会**改写指针。
+
+```bash
+python skill/scripts/defillama.py db path       # 看解析到哪、来源是什么
+python skill/scripts/defillama.py db pointer    # 看指针；--db PATH 可改指向
+```
 
 **备份**：库在 WAL 模式，`-wal` / `-shm` 必须与主文件一起移动。跨设备请用
 `defillama.py db backup --to <file>` 导出单文件，不要分文件复制。

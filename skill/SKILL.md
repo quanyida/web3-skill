@@ -220,11 +220,21 @@ python scripts/defillama.py report add NEAR \
 
 1. `--db PATH`
 2. 环境变量 `TOKEN_RESEARCH_DB`
-3. **用户级指针文件** `~/.token_research_db`（`init` 时自动写入一行 DB 绝对路径）
+3. **用户级指针文件** `~/.token_research_db`（首次建库后自动写入一行 DB 绝对路径）
 4. 沿目录向上找到的已有 `token_research.db`
-5. 回退：skill 同级的 `token_research.db`
+5. 回退：skill 同级的 `token_research.db`；**若该路径在 agent 安装目录下**
+   （`.claude/skills`、`.user_skills`、`.agents`、Doubao/灵码 workspace 等），
+   改落 `~/token_research.db`，来源标 `default:user_home`
 
 技能会被复制到多处（知识库归档 / agent skills / .claude skills），**指针文件让所有副本共享同一个库**，不会各建一个。
+
+> **为什么装在 agent 目录时要搬家**：那里的库在升级/卸载技能时会被删，而且每个副本
+> 各自向上推理会得到不同路径，**静默分裂成多个库**（实测：`.claude/skills` 与
+> `.doubao/.user_skills` 两副本各建一个，互不可见）。落主目录至少保证数据不丢。
+> 已有库不受影响——只要文件存在就沿用，不搬家。
+>
+> **指针落盘时机**：首次建库（`init` 或任何会建表的命令）后指针仍为空时自动写入。
+> `--db` 与环境变量属于「这一次」的显式指定，**不改写**指针。
 
 ```bash
 python scripts/defillama.py db path       # 当前解析到哪个库、来源是什么
